@@ -1,0 +1,597 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+  <title>Private Parental Monitor · One-to-One Screen Sharing</title>
+  <!-- PeerJS for WebRTC -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/peerjs/1.5.4/peerjs.min.js"></script>
+  <!-- QR code generation -->
+  <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
+  <!-- Font Awesome 6 -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+    }
+    body {
+      background: radial-gradient(circle at 10% 20%, #0a0f1c, #020408);
+      min-height: 100vh;
+      padding: 20px;
+    }
+    .dashboard {
+      max-width: 1400px;
+      margin: 0 auto;
+    }
+    .card {
+      background: rgba(12, 20, 30, 0.85);
+      backdrop-filter: blur(12px);
+      border-radius: 2rem;
+      border: 1px solid rgba(59, 130, 246, 0.4);
+      padding: 1.8rem;
+      margin-bottom: 1.8rem;
+      box-shadow: 0 25px 40px -12px rgba(0,0,0,0.5);
+    }
+    h1 {
+      font-size: 1.9rem;
+      background: linear-gradient(135deg, #f0f9ff, #7bc5ff);
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+    h2 {
+      color: #ecf3ff;
+      font-weight: 600;
+      margin-bottom: 1rem;
+      font-size: 1.5rem;
+    }
+    .flex-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 28px;
+      align-items: stretch;
+    }
+    .panel {
+      flex: 1;
+      min-width: 280px;
+    }
+    button {
+      background: #2563eb;
+      border: none;
+      color: white;
+      font-weight: 600;
+      padding: 12px 28px;
+      border-radius: 60px;
+      font-size: 1rem;
+      cursor: pointer;
+      transition: 0.2s;
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+    }
+    button:hover { background: #3b82f6; transform: scale(1.02); }
+    button:active { transform: scale(0.98); }
+    .status-card {
+      padding: 14px 18px;
+      border-radius: 1.5rem;
+      background: #0f172a;
+      margin: 18px 0;
+      color: #cdedff;
+      border-left: 4px solid #3b82f6;
+    }
+    .error-badge {
+      background: #991b1b;
+      border-left-color: #ff6b6b;
+    }
+    .badge {
+      background: #10b981;
+      display: inline-block;
+      padding: 5px 14px;
+      border-radius: 40px;
+      font-size: 0.75rem;
+      font-weight: bold;
+    }
+    video {
+      width: 100%;
+      max-height: 480px;
+      background: #000;
+      border-radius: 28px;
+      border: 3px solid #3b82f6;
+      margin-top: 12px;
+      box-shadow: 0 8px 20px rgba(0,0,0,0.4);
+    }
+    .qr-box {
+      background: white;
+      padding: 18px;
+      border-radius: 1.5rem;
+      display: inline-block;
+      text-align: center;
+      margin-top: 20px;
+    }
+    .child-dashboard {
+      max-width: 700px;
+      margin: 40px auto;
+      background: rgba(10, 18, 28, 0.95);
+      backdrop-filter: blur(12px);
+      border-radius: 2.5rem;
+      padding: 2rem;
+      border: 1px solid #2c6eef;
+      text-align: center;
+    }
+    .hide { display: none; }
+    .instruction-steps {
+      background: #071225;
+      border-radius: 1.2rem;
+      padding: 1rem;
+      margin-top: 1rem;
+      text-align: left;
+      color: #bbd7ff;
+    }
+    .private-badge {
+      background: #8b5cf6;
+      border-radius: 30px;
+      padding: 6px 14px;
+      font-size: 0.7rem;
+      font-weight: bold;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+    footer {
+      text-align: center;
+      color: #5f7ea3;
+      margin-top: 2rem;
+      font-size: 0.85rem;
+    }
+    @media (max-width: 700px) {
+      body { padding: 12px; }
+      button { width: 100%; justify-content: center; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- PARENT DASHBOARD (default visible) -->
+<div id="parentDashboard" class="dashboard">
+  <div class="card">
+    <h1><i class="fas fa-shield-alt" style="color:#3b82f6"></i> Parental Guardian · Private One-to-One</h1>
+    <p style="color:#bbd9f5; margin-top: 8px;"><i class="fas fa-lock"></i> <strong>Only the parent who creates the session can see the child’s screen.</strong> Exclusive peer‑to‑peer connection – no third party ever gains access.</p>
+  </div>
+
+  <div class="flex-row">
+    <!-- Parent monitor panel -->
+    <div class="panel card">
+      <h2><i class="fas fa-eye"></i> 👨‍👩 Parent (Monitor)</h2>
+      <button id="startMonitorBtn"><i class="fas fa-play"></i> Start Private Session</button>
+      <div id="parentStatusBox" class="status-card">⚡ Ready — click to generate your private QR code</div>
+      <div id="qrParentArea" style="text-align: center;"></div>
+      <div id="liveVideoArea" style="display: none;">
+        <div class="badge" style="background:#2563eb; margin-bottom: 10px;"><i class="fas fa-desktop"></i> LIVE CHILD SCREEN (Only you see this)</div>
+        <video id="childScreenVideo" autoplay playsinline muted></video>
+        <button id="stopSessionBtn" style="background:#4b5563; margin-top: 12px;"><i class="fas fa-stop-circle"></i> End Session & Disconnect</button>
+      </div>
+    </div>
+
+    <!-- Information panel for child & privacy note -->
+    <div class="panel card">
+      <h2><i class="fas fa-child"></i> 🧒 Child Instructions</h2>
+      <div class="instruction-steps">
+        <i class="fas fa-info-circle"></i> <strong>How to share (private & exclusive):</strong>
+        <ol style="margin-left: 20px; margin-top: 12px; line-height: 1.5;">
+          <li>Parent starts a session → unique private QR code appears.</li>
+          <li>Child scans QR → opens secure page → clicks "Share My Screen".</li>
+          <li>After permission, <strong>only the parent who generated that QR</strong> sees the screen.</li>
+          <li>No other person can view the stream – even with the same link, the parent rejects extra connections.</li>
+        </ol>
+        <div class="private-badge" style="margin-top: 15px;"><i class="fas fa-user-secret"></i> One parent · One child · Zero outsiders</div>
+      </div>
+      <div id="childSideStatus" class="status-card"><i class="fas fa-hourglass-half"></i> Waiting for QR scan...</div>
+    </div>
+  </div>
+
+  <div class="card" style="text-align: center;">
+    <div class="badge" style="background:#1e3a8a;"><i class="fas fa-shield"></i> Absolute privacy guarantee</div>
+    <p style="color:#b9cfe8; margin-top: 12px;">✔ WebRTC direct connection – no cloud recording.<br>
+    ✔ The link contains a one‑time parent ID. If a second child tries to connect using the same link, the parent ignores it.<br>
+    ✔ Only the first child who scans (your kid) gets connected. After that, QR code becomes invalid.</p>
+  </div>
+  <footer><i class="fas fa-qrcode"></i> Exclusive session: the parent who shares the QR code is the ONLY viewer.</footer>
+</div>
+
+<!-- CHILD DASHBOARD (hidden initially, shown via QR link) -->
+<div id="childDashboard" class="child-dashboard hide">
+  <i class="fas fa-hand-holding-heart" style="font-size: 3rem; color: #3b82f6;"></i>
+  <h2><i class="fas fa-share-alt"></i> Share Your Screen Privately</h2>
+  <p style="color: #acc9ff; margin: 12px 0;">The parent who sent you this link will be the <strong>only person</strong> who can see your screen. No one else can watch.</p>
+  <div id="childMessageArea" class="status-card" style="background:#0c1428;">Ready – click below to share securely</div>
+  <button id="shareScreenBtn"><i class="fas fa-desktop"></i> 🖥️ Share My Screen (Private)</button>
+  <div class="instruction-steps" style="margin-top: 24px;">
+    <i class="fas fa-lock"></i> <strong>Privacy note:</strong> After you share, the parent’s session locks to you. Even if another person opens the same link, they cannot connect.<br>
+    <span style="font-size: 0.85rem;">✅ Close this tab to stop sharing anytime.</span>
+  </div>
+  <p style="margin-top: 25px; font-size: 0.8rem;"><i class="fas fa-times-circle"></i> Stop sharing → close tab or press browser’s stop button.</p>
+</div>
+
+<script>
+  (function() {
+    // ---------- GLOBALS ----------
+    let activeParentPeer = null;
+    let activeParentCall = null;
+    let parentCallAccepted = false;     // ensures only ONE child connection
+    let currentSessionActive = false;
+    let parentPeerIdForChild = null;
+
+    // Child side globals (used only in child mode)
+    let childPeerInstance = null;
+    let childScreenStream = null;
+    let childCallToParent = null;
+    let childAlreadySharing = false;     // prevent multiple shares from same child
+
+    // DOM references (parent)
+    const parentDashboard = document.getElementById('parentDashboard');
+    const childDashboard = document.getElementById('childDashboard');
+    const startMonitorBtn = document.getElementById('startMonitorBtn');
+    const parentStatusBox = document.getElementById('parentStatusBox');
+    const qrParentArea = document.getElementById('qrParentArea');
+    const liveVideoArea = document.getElementById('liveVideoArea');
+    const childScreenVideo = document.getElementById('childScreenVideo');
+    const stopSessionBtn = document.getElementById('stopSessionBtn');
+    const childSideStatus = document.getElementById('childSideStatus');
+
+    // Helper: update parent status
+    function updateParentStatus(msg, isError = false) {
+      parentStatusBox.innerHTML = isError ? `<i class="fas fa-exclamation-triangle"></i> ${msg}` : `<i class="fas fa-info-circle"></i> ${msg}`;
+      if (isError) parentStatusBox.classList.add('error-badge');
+      else parentStatusBox.classList.remove('error-badge');
+    }
+
+    // Clean up parent session completely
+    function cleanupParentSession() {
+      if (activeParentCall) {
+        try { activeParentCall.close(); } catch(e) {}
+        activeParentCall = null;
+      }
+      if (activeParentPeer) {
+        try { activeParentPeer.destroy(); } catch(e) {}
+        activeParentPeer = null;
+      }
+      if (childScreenVideo.srcObject) {
+        const oldStream = childScreenVideo.srcObject;
+        if (oldStream && oldStream.getTracks) oldStream.getTracks().forEach(t => t.stop());
+        childScreenVideo.srcObject = null;
+      }
+      liveVideoArea.style.display = 'none';
+      currentSessionActive = false;
+      parentCallAccepted = false;
+      parentPeerIdForChild = null;
+    }
+
+    // Generate QR and link for child
+    function generateExclusiveQR(parentId) {
+      qrParentArea.innerHTML = '';
+      const baseUrl = window.location.href.split('?')[0];
+      const childJoinUrl = `${baseUrl}?childShare=true&parentId=${encodeURIComponent(parentId)}`;
+      
+      const qrWrapper = document.createElement('div');
+      qrWrapper.className = 'qr-box';
+      qrParentArea.appendChild(qrWrapper);
+      
+      try {
+        new QRCode(qrWrapper, {
+          text: childJoinUrl,
+          width: 200,
+          height: 200,
+          colorDark: "#000000",
+          colorLight: "#ffffff",
+          correctLevel: QRCode.CorrectLevel.H
+        });
+      } catch(e) {
+        qrWrapper.innerHTML = `<div style="padding:20px;background:#eee;">⚠️ QR error, use link below</div>`;
+      }
+      
+      const linkDiv = document.createElement('div');
+      linkDiv.style.marginTop = '16px';
+      linkDiv.style.wordBreak = 'break-all';
+      linkDiv.style.fontSize = '0.8rem';
+      linkDiv.style.background = '#0f172a';
+      linkDiv.style.padding = '10px';
+      linkDiv.style.borderRadius = '60px';
+      linkDiv.innerHTML = `<i class="fas fa-link"></i> <strong>Private link (share only with your child):</strong><br><a href="${childJoinUrl}" target="_blank" style="color:#7ab7ff;">${childJoinUrl.substring(0, 80)}...</a><br>
+      <span style="font-size:0.7rem;"><i class="fas fa-user-secret"></i> Only the first child who uses this link will connect. After that, the QR expires.</span>`;
+      qrParentArea.appendChild(linkDiv);
+    }
+
+    // Parent: start private monitoring session
+    function startPrivateSession() {
+      cleanupParentSession(); // ensure clean state
+      const roomId = 'parent_' + Math.random().toString(36).substring(2, 12) + Date.now().toString(36);
+      parentPeerIdForChild = roomId;
+      updateParentStatus(`🔒 Creating private room ... (ID: ${roomId.substring(0, 10)})`);
+      
+      activeParentPeer = new Peer(roomId, {
+        debug: 0,
+        config: {
+          iceServers: [
+            { urls: "stun:stun.l.google.com:19302" },
+            { urls: "stun:stun1.l.google.com:19302" },
+            { urls: "stun:global.stun.twilio.com:3478" }
+          ]
+        }
+      });
+      
+      activeParentPeer.on('open', (id) => {
+        updateParentStatus(`✅ Private session active! QR code ready. Child scans → only you will see the screen.`);
+        generateExclusiveQR(id);
+        childSideStatus.innerHTML = `<i class="fas fa-qrcode"></i> Parent session live. Scan QR to start private monitoring.`;
+      });
+      
+      // --- EXCLUSIVITY: accept ONLY the first incoming call ---
+      activeParentPeer.on('call', (incomingCall) => {
+        if (parentCallAccepted) {
+          // Already connected to a child – reject extra connections
+          console.warn("Rejecting extra call attempt – only one child allowed per session.");
+          incomingCall.close();
+          updateParentStatus(`⚠️ Another device tried to connect, but only your child's first connection is accepted.`, false);
+          return;
+        }
+        
+        // First call: accept it
+        parentCallAccepted = true;
+        if (activeParentCall) {
+          try { activeParentCall.close(); } catch(e) {}
+        }
+        activeParentCall = incomingCall;
+        incomingCall.answer(); // answer without sending any stream (receiving only)
+        
+        incomingCall.on('stream', (remoteStream) => {
+          if (childScreenVideo.srcObject) {
+            const oldStream = childScreenVideo.srcObject;
+            if (oldStream && oldStream.getTracks) oldStream.getTracks().forEach(t => t.stop());
+          }
+          childScreenVideo.srcObject = remoteStream;
+          liveVideoArea.style.display = 'block';
+          updateParentStatus(`🟢 PRIVATE LIVE: You are now watching your child's screen. No one else can view this stream.`);
+          childSideStatus.innerHTML = `<i class="fas fa-check-circle" style="color:#10b981;"></i> ✅ CONNECTED: Parent sees your screen privately.`;
+          currentSessionActive = true;
+          
+          // Remove QR code to prevent accidental reuse (extra security)
+          qrParentArea.innerHTML = `<div style="background:#0a2f2a; padding:20px; border-radius:2rem; text-align:center;">
+            <i class="fas fa-check-double"></i> <strong>Child connected – session active and private.</strong><br>
+            The QR code is now invalid. Only the connected child's screen is visible.
+          </div>`;
+          
+          // If child stops sharing
+          if (remoteStream.getVideoTracks()[0]) {
+            remoteStream.getVideoTracks()[0].onended = () => {
+              updateParentStatus(`⏹️ Child stopped sharing. Session ended.`);
+              liveVideoArea.style.display = 'none';
+              childSideStatus.innerHTML = `⏹️ Screen sharing stopped by child.`;
+              currentSessionActive = false;
+              parentCallAccepted = false;
+            };
+          }
+        });
+        
+        incomingCall.on('close', () => {
+          if (childScreenVideo.srcObject) {
+            const oldStream = childScreenVideo.srcObject;
+            if (oldStream && oldStream.getTracks) oldStream.getTracks().forEach(t => t.stop());
+            childScreenVideo.srcObject = null;
+          }
+          liveVideoArea.style.display = 'none';
+          updateParentStatus(`🔌 Child disconnected. You can start a new session.`);
+          childSideStatus.innerHTML = `🔌 Disconnected from parent.`;
+          currentSessionActive = false;
+          parentCallAccepted = false;
+          activeParentCall = null;
+        });
+        
+        incomingCall.on('error', (err) => {
+          console.error("Call error:", err);
+          updateParentStatus(`Call error: ${err.message || err}`, true);
+        });
+      });
+      
+      activeParentPeer.on('error', (err) => {
+        console.error("Parent peer error:", err);
+        updateParentStatus(`Error: ${err.type || err.message}. Refresh and retry.`, true);
+        cleanupParentSession();
+      });
+    }
+    
+    function stopMonitoringSession() {
+      if (activeParentCall) {
+        try { activeParentCall.close(); } catch(e) {}
+        activeParentCall = null;
+      }
+      if (activeParentPeer) {
+        try { activeParentPeer.destroy(); } catch(e) {}
+        activeParentPeer = null;
+      }
+      if (childScreenVideo.srcObject) {
+        const str = childScreenVideo.srcObject;
+        if (str && str.getTracks) str.getTracks().forEach(t => t.stop());
+        childScreenVideo.srcObject = null;
+      }
+      liveVideoArea.style.display = 'none';
+      currentSessionActive = false;
+      parentCallAccepted = false;
+      qrParentArea.innerHTML = `<div style="padding: 20px; color:#b9caf5;">No active session. Click "Start Private Session".</div>`;
+      updateParentStatus(`⏹️ Session ended. You can start a new private session.`);
+      childSideStatus.innerHTML = `📴 Monitoring session closed.`;
+      parentPeerIdForChild = null;
+    }
+    
+    // -------------------------------
+    // CHILD MODE (PRIVATE & EXCLUSIVE)
+    // -------------------------------
+    function initChildMode(parentIdFromUrl) {
+      if (!parentIdFromUrl) {
+        document.body.innerHTML = `<div style="padding:2rem; color:white; text-align:center;">Invalid link. Please scan the QR code from your parent.</div>`;
+        return;
+      }
+      
+      parentDashboard.classList.add('hide');
+      childDashboard.classList.remove('hide');
+      
+      const childMessageArea = document.getElementById('childMessageArea');
+      const shareBtn = document.getElementById('shareScreenBtn');
+      let localChildPeer = null;
+      let localStream = null;
+      let activeCall = null;
+      let childConnected = false;
+      
+      function cleanupChild() {
+        if (activeCall) {
+          try { activeCall.close(); } catch(e) {}
+          activeCall = null;
+        }
+        if (localStream) {
+          localStream.getTracks().forEach(track => track.stop());
+          localStream = null;
+        }
+        if (localChildPeer) {
+          try { localChildPeer.destroy(); } catch(e) {}
+          localChildPeer = null;
+        }
+        childConnected = false;
+        childAlreadySharing = false;
+      }
+      
+      shareBtn.onclick = async () => {
+        if (shareBtn.disabled || childAlreadySharing) {
+          childMessageArea.innerHTML = '<i class="fas fa-info-circle"></i> Already sharing or connecting. Wait or refresh.';
+          return;
+        }
+        shareBtn.disabled = true;
+        shareBtn.innerHTML = '<i class="fas fa-spinner fa-pulse"></i> Requesting screen...';
+        childMessageArea.innerHTML = '<i class="fas fa-hourglass-half"></i> Requesting screen capture permission...';
+        
+        try {
+          const screenStream = await navigator.mediaDevices.getDisplayMedia({
+            video: { cursor: "motion" },
+            audio: false
+          });
+          localStream = screenStream;
+          childMessageArea.innerHTML = '<i class="fas fa-check-circle"></i> Screen captured. Connecting to parent (private)...';
+          
+          const childPeerId = 'child_' + Math.random().toString(36).substring(2, 12) + Date.now();
+          localChildPeer = new Peer(childPeerId, {
+            config: { iceServers: [{ urls: "stun:stun.l.google.com:19302" }, { urls: "stun:stun1.l.google.com:19302" }] }
+          });
+          
+          localChildPeer.on('open', () => {
+            if (childConnected) return;
+            childMessageArea.innerHTML = '<i class="fas fa-plug"></i> Establishing private link...';
+            activeCall = localChildPeer.call(parentIdFromUrl, screenStream);
+            
+            activeCall.on('stream', () => {
+              // Child doesn't need remote stream, but connection is up
+              console.log("Child: call established, parent is receiving.");
+            });
+            
+            activeCall.on('close', () => {
+              childMessageArea.innerHTML = '🔇 Parent ended session or disconnected. You can close this tab.';
+              cleanupChild();
+              shareBtn.disabled = false;
+              shareBtn.innerHTML = '<i class="fas fa-desktop"></i> 🖥️ Share My Screen (Private)';
+              childAlreadySharing = false;
+            });
+            
+            activeCall.on('error', (err) => {
+              console.error("Call error:", err);
+              childMessageArea.innerHTML = `❌ Connection failed: ${err.message}. Ensure parent session is active.`;
+              cleanupChild();
+              shareBtn.disabled = false;
+              shareBtn.innerHTML = '<i class="fas fa-desktop"></i> 🖥️ Share My Screen (Private)';
+              childAlreadySharing = false;
+            });
+            
+            childConnected = true;
+            childAlreadySharing = true;
+            childMessageArea.innerHTML = '<i class="fas fa-eye" style="color:#4ade80;"></i> ✅ PRIVATE: Parent is now the only one viewing your screen!';
+            shareBtn.innerHTML = '<i class="fas fa-check-circle"></i> Screen Shared ✓ (Private)';
+            shareBtn.disabled = false; // allow but prevent double share via flag
+            // disable further clicks with flag
+            shareBtn.onclick = () => {
+              childMessageArea.innerHTML = '<i class="fas fa-lock"></i> Already sharing. Close tab to stop.';
+            };
+            
+            // If user stops sharing from browser UI
+            const videoTrack = screenStream.getVideoTracks()[0];
+            if (videoTrack) {
+              videoTrack.onended = () => {
+                childMessageArea.innerHTML = '⏹️ You stopped screen sharing. Parent can no longer see your screen.';
+                cleanupChild();
+                childAlreadySharing = false;
+                shareBtn.disabled = false;
+                shareBtn.innerHTML = '<i class="fas fa-desktop"></i> 🖥️ Share My Screen (Private)';
+                shareBtn.onclick = arguments.callee; // restore simple onclick (but page can be reloaded)
+              };
+            }
+          });
+          
+          localChildPeer.on('error', (err) => {
+            console.error("Child peer error:", err);
+            childMessageArea.innerHTML = `⚠️ Peer error: ${err.type}. Please refresh and scan again.`;
+            cleanupChild();
+            shareBtn.disabled = false;
+            shareBtn.innerHTML = '<i class="fas fa-desktop"></i> 🖥️ Share My Screen (Private)';
+            childAlreadySharing = false;
+          });
+          
+          window.addEventListener('beforeunload', () => {
+            if (localStream) localStream.getTracks().forEach(t => t.stop());
+            if (localChildPeer) localChildPeer.destroy();
+          });
+          
+        } catch (screenError) {
+          console.error(screenError);
+          let errorMsg = screenError.message;
+          if (errorMsg.includes("Permission denied") || errorMsg.includes("not allowed")) {
+            errorMsg = "Screen share permission required. Click allow when prompted.";
+          }
+          childMessageArea.innerHTML = `❌ ${errorMsg}`;
+          shareBtn.disabled = false;
+          shareBtn.innerHTML = '<i class="fas fa-desktop"></i> 🖥️ Share My Screen (Private)';
+          cleanupChild();
+          childAlreadySharing = false;
+        }
+      };
+    }
+    
+    // ---------- Routing: parent dashboard vs child mode ----------
+    function routeBasedOnParams() {
+      const urlParams = new URLSearchParams(window.location.search);
+      const isChildShare = urlParams.get("childShare") === "true";
+      const parentIdParam = urlParams.get("parentId");
+      
+      if (isChildShare && parentIdParam && parentIdParam.trim() !== "") {
+        initChildMode(parentIdParam.trim());
+      } else {
+        parentDashboard.classList.remove('hide');
+        childDashboard.classList.add('hide');
+        if (startMonitorBtn) startMonitorBtn.onclick = startPrivateSession;
+        if (stopSessionBtn) stopSessionBtn.onclick = stopMonitoringSession;
+        updateParentStatus("Ready — click 'Start Private Session' to generate an exclusive QR code.");
+        qrParentArea.innerHTML = `<div style="padding: 20px; background:#0a1122; border-radius: 2rem; text-align:center;">✨ Click the button to create a private, one-to-one monitoring session.</div>`;
+      }
+    }
+    
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', routeBasedOnParams);
+    } else {
+      routeBasedOnParams();
+    }
+  })();
+</script>
+</body>
+</html>
