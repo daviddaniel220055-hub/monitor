@@ -77,7 +77,7 @@
   </div>
 
   <div class="card" style="text-align:center;">
-    <p style="color:#b9cfe8;">✔ Direct WebRTC – no cloud recording.<br>✔ Session code expires after first connection.<br>✔ Works on <strong>HTTPS or localhost</strong> (for screen sharing).</p>
+    <p style="color:#b9cfe8;">✔ Direct WebRTC – no cloud recording.<br>✔ Session code is the parent's direct Peer ID.<br>✔ Works across different devices, browsers, and tabs.</p>
   </div>
   <footer><i class="fas fa-key"></i> Parent creates session, child enters code – simple and private.</footer>
 </div>
@@ -103,9 +103,7 @@
     let activeParentPeer = null;
     let activeParentCall = null;
     let parentCallAccepted = false;
-    let currentSessionActive = false;
     let currentSessionCode = null;
-    let parentPeerIdForChild = null;
 
     const parentStatusBox = document.getElementById('parentStatusBox');
     const sessionCodeArea = document.getElementById('sessionCodeArea');
@@ -117,9 +115,6 @@
     const childJoinBtn = document.getElementById('childJoinBtn');
     const childMessageArea = document.getElementById('childMessageArea');
     const childBrowserWarning = document.getElementById('childBrowserWarning');
-
-    // Store active sessions (code -> parentPeerId) for child lookup
-    window.activeSessions = window.activeSessions || {};
 
     function updateParentStatus(msg, isError = false) {
       parentStatusBox.innerHTML = isError ? `<i class="fas fa-exclamation-triangle"></i> ${msg}` : `<i class="fas fa-info-circle"></i> ${msg}`;
@@ -135,23 +130,21 @@
 
     function cleanupParentSession() {
       if (activeParentCall) { try { activeParentCall.close(); } catch(e) {} activeParentCall = null; }
-      if (activeParentPeer) { try { activeParentPeer.destroy(); } catch(e) {} activeParentPeer = null; }
+      if (activeParentPeer) { 
+        try { activeParentPeer.destroy(); } catch(e) {} 
+        activeParentPeer = null; 
+      }
       if (childScreenVideo.srcObject) {
         const old = childScreenVideo.srcObject;
         if (old && old.getTracks) old.getTracks().forEach(t => t.stop());
         childScreenVideo.srcObject = null;
       }
       liveVideoArea.style.display = 'none';
-      currentSessionActive = false;
       parentCallAccepted = false;
-      if (currentSessionCode && window.activeSessions[currentSessionCode]) {
-        delete window.activeSessions[currentSessionCode];
-      }
       currentSessionCode = null;
-      parentPeerIdForChild = null;
     }
 
-    function showSessionCode(code, peerId) {
+    function showSessionCode(code) {
       sessionCodeArea.innerHTML = `
         <div class="session-code">
           <i class="fas fa-key" style="font-size: 1.5rem; color:#7bc5ff;"></i>
@@ -172,30 +165,64 @@
       }
     }
 
-    function startPrivateSession() {
+    async function startPrivateSession() {
       cleanupParentSession();
-      const sessionCode = generateSessionCode();
-      const peerId = 'parent_' + Math.random().toString(36).substring(2, 12) + Date.now().toString(36);
-      currentSessionCode = sessionCode;
-      parentPeerIdForChild = peerId;
-      window.activeSessions[sessionCode] = peerId;
-
-      updateParentStatus(`🔒 Creating private session with code: ${sessionCode} ...`);
-
-      activeParentPeer = new Peer(peerId, {
-        debug: 0,
-        config: { iceServers: [
-          { urls: "stun:stun.l.google.com:19302" },
-          { urls: "stun:stun1.l.google.com:19302" },
-          { urls: "stun:global.stun.twilio.com:3478" }
-        ]}
-      });
-
-      activeParentPeer.on('open', (id) => {
-        updateParentStatus(`✅ Session active! Share the code with your child.`);
-        showSessionCode(sessionCode, id);
-      });
-
+      // Generate a unique 6-digit code and attempt to use it as Peer ID
+      let code = generateSessionCode();
+      let peerCreated = false;
+      let attempts = 0;
+      const maxAttempts = 10;
+      
+      updateParentStatus(`🔒 Creating private session... (attempting code: ${code})`);
+      
+      while (!peerCreated && attempts < maxAttempts) {
+        try {
+          // Attempt to create Peer with the generated code as ID
+          const testPeer = new Peer(code, {
+            debug: 0,
+            config: { iceServers: [
+              { urls: "stun:stun.l.google.com:19302" },
+              { urls: "stun:stun1.l.google.com:19302" },
+              { urls: "stun:global.stun.twilio.com:3478" }
+            ]}
+          });
+          
+          await new Promise((resolve, reject) => {
+            testPeer.on('open', () => {
+              peerCreated = true;
+              activeParentPeer = testPeer;
+              resolve();
+            });
+            testPeer.on('error', (err) => {
+              if (err.type === 'unavailable-id' || err.message.includes('ID is taken')) {
+                reject(new Error('ID taken'));
+              } else {
+                reject(err);
+              }
+            });
+            setTimeout(() => reject(new Error('timeout')), 5000);
+          });
+          
+          if (peerCreated) {
+            currentSessionCode = code;
+            break;
+          }
+        } catch (err) {
+          console.warn(`Code ${code} unavailable, retrying...`, err);
+          code = generateSessionCode();
+          attempts++;
+        }
+      }
+      
+      if (!peerCreated) {
+        updateParentStatus(`❌ Failed to create session after multiple attempts. Please try again.`, true);
+        return;
+      }
+      
+      // Session established
+      updateParentStatus(`✅ Session active! Share the code with your child.`);
+      showSessionCode(currentSessionCode);
+      
       activeParentPeer.on('call', (incomingCall) => {
         if (parentCallAccepted) {
           incomingCall.close();
@@ -206,7 +233,7 @@
         if (activeParentCall) try { activeParentCall.close(); } catch(e) {}
         activeParentCall = incomingCall;
         incomingCall.answer();
-
+        
         incomingCall.on('stream', (remoteStream) => {
           if (childScreenVideo.srcObject) {
             const old = childScreenVideo.srcObject;
@@ -215,25 +242,21 @@
           childScreenVideo.srcObject = remoteStream;
           liveVideoArea.style.display = 'block';
           updateParentStatus(`🟢 PRIVATE LIVE: You are watching your child's screen. No one else can view.`);
-          currentSessionActive = true;
-          // Invalidate the session code after connection
-          if (currentSessionCode && window.activeSessions[currentSessionCode]) {
-            delete window.activeSessions[currentSessionCode];
-          }
+          // Invalidate the session code by destroying the peer? Actually we keep it for the call.
+          // But we can remove the QR-like display
           sessionCodeArea.innerHTML = `<div style="background:#0a2f2a; padding:20px; border-radius:2rem; text-align:center;">
-            <i class="fas fa-check-double"></i> Child connected – session active and private.<br>Code is now invalid.
+            <i class="fas fa-check-double"></i> Child connected – session active and private.<br>Code is now invalid for new connections.
           </div>`;
-
+          
           if (remoteStream.getVideoTracks()[0]) {
             remoteStream.getVideoTracks()[0].onended = () => {
               updateParentStatus(`⏹️ Child stopped sharing.`);
               liveVideoArea.style.display = 'none';
-              currentSessionActive = false;
               parentCallAccepted = false;
             };
           }
         });
-
+        
         incomingCall.on('close', () => {
           if (childScreenVideo.srcObject) {
             const old = childScreenVideo.srcObject;
@@ -242,30 +265,32 @@
           }
           liveVideoArea.style.display = 'none';
           updateParentStatus(`🔌 Child disconnected. Start a new session.`);
-          currentSessionActive = false;
           parentCallAccepted = false;
           activeParentCall = null;
         });
-
+        
         incomingCall.on('error', (err) => updateParentStatus(`Call error: ${err.message}`, true));
       });
-
-      activeParentPeer.on('error', (err) => { updateParentStatus(`Error: ${err.type}`, true); cleanupParentSession(); });
+      
+      activeParentPeer.on('error', (err) => { 
+        updateParentStatus(`Peer error: ${err.type}`, true); 
+        cleanupParentSession();
+      });
     }
-
+    
     function stopMonitoringSession() {
       cleanupParentSession();
       sessionCodeArea.innerHTML = `<div style="padding: 20px; color:#b9caf5;">No active session. Click "Start Private Session".</div>`;
       updateParentStatus(`⏹️ Session ended.`);
     }
-
+    
     // ---------- Child join logic (code entry on the same page) ----------
     let childPeerInstance = null;
     let childStream = null;
     let childCall = null;
     let childConnected = false;
     let isJoining = false;
-
+    
     function cleanupChild() {
       if (childCall) { try { childCall.close(); } catch(e) {} childCall = null; }
       if (childStream) { childStream.getTracks().forEach(t => t.stop()); childStream = null; }
@@ -273,7 +298,7 @@
       childConnected = false;
       isJoining = false;
     }
-
+    
     async function childJoinSession() {
       if (isJoining) {
         updateChildMessage("Already joining, please wait...");
@@ -284,13 +309,7 @@
         updateChildMessage("Please enter a valid 6-digit code.", true);
         return;
       }
-
-      const parentPeerId = window.activeSessions[enteredCode];
-      if (!parentPeerId) {
-        updateChildMessage("Invalid or expired session code. Ask parent to start a new session.", true);
-        return;
-      }
-
+      
       // Check screen share support
       if (!isScreenShareSupported()) {
         let errMsg = "";
@@ -302,17 +321,18 @@
         return;
       }
       childBrowserWarning.style.display = "none";
-
+      
       isJoining = true;
       childJoinBtn.disabled = true;
       childJoinBtn.innerHTML = '<i class="fas fa-spinner fa-pulse"></i> Requesting screen...';
       updateChildMessage("Requesting screen capture permission...");
-
+      
       try {
         const screenStream = await navigator.mediaDevices.getDisplayMedia({ video: { cursor: "motion" }, audio: false });
         childStream = screenStream;
         updateChildMessage("Screen captured. Establishing private connection...");
-
+        
+        // Create a random child peer ID
         const childPeerId = 'child_' + Math.random().toString(36).substring(2, 12) + Date.now();
         childPeerInstance = new Peer(childPeerId, {
           config: { iceServers: [
@@ -320,10 +340,11 @@
             { urls: "stun:stun1.l.google.com:19302" }
           ]}
         });
-
+        
         childPeerInstance.on('open', () => {
           if (childConnected) return;
-          childCall = childPeerInstance.call(parentPeerId, screenStream);
+          // Call the parent using the entered code as parent's Peer ID
+          childCall = childPeerInstance.call(enteredCode, screenStream);
           childCall.on('stream', () => {});
           childCall.on('close', () => {
             updateChildMessage("Parent ended session. You can close this tab.");
@@ -334,7 +355,7 @@
             childCodeInput.disabled = false;
           });
           childCall.on('error', (err) => {
-            updateChildMessage(`Connection error: ${err.message}. Ensure parent session is active.`, true);
+            updateChildMessage(`Connection error: ${err.message}. Ensure parent session is active and code is correct.`, true);
             cleanupChild();
             childJoinBtn.disabled = false;
             childJoinBtn.innerHTML = '<i class="fas fa-sign-in-alt"></i> Join & Share Screen';
@@ -347,7 +368,7 @@
           childJoinBtn.disabled = false;
           childJoinBtn.onclick = () => updateChildMessage('Already sharing. Close tab to stop.');
           childCodeInput.disabled = true;
-
+          
           const videoTrack = screenStream.getVideoTracks()[0];
           if (videoTrack) {
             videoTrack.onended = () => {
@@ -357,12 +378,11 @@
               childJoinBtn.innerHTML = '<i class="fas fa-sign-in-alt"></i> Join & Share Screen';
               isJoining = false;
               childCodeInput.disabled = false;
-              // restore original onclick handler
               childJoinBtn.onclick = childJoinSession;
             };
           }
         });
-
+        
         childPeerInstance.on('error', (err) => {
           updateChildMessage(`Peer error: ${err.type}. Refresh and try again.`, true);
           cleanupChild();
@@ -371,9 +391,9 @@
           isJoining = false;
           childCodeInput.disabled = false;
         });
-
+        
         window.addEventListener('beforeunload', () => cleanupChild());
-
+        
       } catch (err) {
         console.error(err);
         let friendlyMsg = err.message;
@@ -386,12 +406,12 @@
         cleanupChild();
       }
     }
-
+    
     // Attach event listeners
     startMonitorBtn.onclick = startPrivateSession;
     stopSessionBtn.onclick = stopMonitoringSession;
     childJoinBtn.onclick = childJoinSession;
-
+    
     // Initial UI state
     updateParentStatus("Ready — click 'Start Private Session' to generate a code.");
     sessionCodeArea.innerHTML = `<div style="padding:20px; background:#0a1122; border-radius:2rem; text-align:center;">✨ Start a new private monitoring session.</div>`;
