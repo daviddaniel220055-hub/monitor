@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
-  <title>Parental Guardian · Cross-Device Screen Monitor</title>
+  <title>Parental Guardian · Fix Black Screen</title>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/peerjs/1.5.4/peerjs.min.js"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
   <style>
@@ -17,111 +17,80 @@
     .panel { flex: 1; min-width: 280px; }
     button { background: #2563eb; border: none; color: white; font-weight: 600; padding: 12px 28px; border-radius: 60px; font-size: 1rem; cursor: pointer; display: inline-flex; align-items: center; gap: 10px; transition: 0.2s; }
     button:hover { background: #3b82f6; transform: scale(1.02); }
-    .status-card { padding: 14px 18px; border-radius: 1.5rem; background: #0f172a; margin: 18px 0; color: #cdedff; border-left: 4px solid #3b82f6; }
+    .status-card { padding: 14px 18px; border-radius: 1.5rem; background: #0f172a; margin: 18px 0; color: #cdedff; border-left: 4px solid #3b82f6; font-family: monospace; font-size: 0.85rem; word-break: break-word; }
     .error-badge { background: #991b1b; border-left-color: #ff6b6b; }
     .badge { background: #10b981; display: inline-block; padding: 5px 14px; border-radius: 40px; font-size: 0.75rem; font-weight: bold; }
-    video { width: 100%; max-height: 480px; background: #000; border-radius: 28px; border: 3px solid #3b82f6; margin-top: 12px; }
+    video { width: 100%; max-height: 480px; background: #111; border-radius: 28px; border: 3px solid #3b82f6; margin-top: 12px; }
     .session-code { background: #0a1128; border-radius: 2rem; padding: 30px; text-align: center; margin: 20px 0; }
     .code-digits { font-size: 3rem; letter-spacing: 12px; font-weight: bold; background: #1e293b; display: inline-block; padding: 15px 30px; border-radius: 1.5rem; font-family: monospace; color: #7bc5ff; }
     .copy-btn { background: #334155; padding: 8px 18px; font-size: 0.9rem; margin-left: 10px; }
     .join-area { background: #0f172a; border-radius: 1.5rem; padding: 1.5rem; margin-top: 1rem; }
     .code-input { background: #0f172a; border: 2px solid #3b82f6; padding: 14px 20px; border-radius: 60px; font-size: 1.2rem; color: white; text-align: center; letter-spacing: 4px; width: 220px; font-family: monospace; }
     .warning { background: #7c2d12; border-left-color: #f97316; }
-    .device-info { font-size: 0.75rem; color: #7aa2f7; margin-top: 8px; }
-    .fix-box { background: #1e293b; border-radius: 1rem; padding: 12px; margin-top: 10px; text-align: left; font-size: 0.8rem; }
     footer { text-align: center; color: #5f7ea3; margin-top: 2rem; font-size: 0.85rem; }
+    .console-log { background: #000000aa; padding: 8px; border-radius: 12px; margin-top: 12px; font-size: 10px; color: #8fef8f; }
     @media (max-width: 700px) { button { width: 100%; justify-content: center; } .code-digits { font-size: 2rem; letter-spacing: 6px; } }
   </style>
 </head>
 <body>
 <div class="container">
   <div class="card">
-    <h1><i class="fas fa-shield-alt" style="color:#3b82f6"></i> Parental Guardian · Cross-Device</h1>
-    <p style="color:#bbd9f5;">🔒 <strong>Only the parent who creates the session sees the child’s screen.</strong> Works across laptop ↔ phone (Android & iOS as viewer only).</p>
+    <h1><i class="fas fa-shield-alt" style="color:#3b82f6"></i> Parental Guardian · Black Screen Fix</h1>
+    <p style="color:#bbd9f5;">🔒 <strong>Only the parent who creates the session sees the child’s screen.</strong> If black screen, open browser console (F12) to see logs.</p>
   </div>
 
   <div class="flex-row">
-    <!-- Parent panel -->
     <div class="panel card">
       <h2><i class="fas fa-eye"></i> 👨‍👩 Parent (Monitor)</h2>
       <button id="startMonitorBtn"><i class="fas fa-play"></i> Start Private Session</button>
       <div id="parentStatusBox" class="status-card">⚡ Ready — click to generate session code</div>
       <div id="sessionCodeArea" style="text-align: center;"></div>
       <div id="liveVideoArea" style="display: none;">
-        <div class="badge" style="background:#2563eb;">📡 LIVE CHILD SCREEN (Only you)</div>
+        <div class="badge" style="background:#2563eb;">📡 LIVE CHILD SCREEN</div>
         <video id="childScreenVideo" autoplay playsinline muted></video>
         <button id="stopSessionBtn" style="background:#4b5563; margin-top: 12px;"><i class="fas fa-stop-circle"></i> End Session</button>
       </div>
     </div>
 
-    <!-- Child panel (code entry + share) -->
     <div class="panel card">
       <h2><i class="fas fa-child"></i> 🧒 Child (Share Screen)</h2>
       <div class="join-area">
-        <p style="margin-bottom: 12px;"><i class="fas fa-key"></i> Enter the 6‑digit session code from parent:</p>
+        <p><i class="fas fa-key"></i> Enter parent's 6‑digit code:</p>
         <div style="display: flex; gap: 10px; flex-wrap: wrap; align-items: center; justify-content: center;">
-          <input type="text" id="childCodeInput" class="code-input" maxlength="6" placeholder="e.g., A3F9K2" autocomplete="off" style="text-transform: uppercase;">
+          <input type="text" id="childCodeInput" class="code-input" maxlength="6" placeholder="A3F9K2" autocomplete="off" style="text-transform: uppercase;">
           <button id="childJoinBtn"><i class="fas fa-sign-in-alt"></i> Join & Share Screen</button>
         </div>
-        <div id="childMessageArea" class="status-card" style="margin-top: 15px; font-size: 0.9rem;">Ready — enter code and click Join.</div>
+        <div id="childMessageArea" class="status-card" style="margin-top: 15px;">Ready — enter code and click Join.</div>
         <div id="childBrowserWarning" class="status-card warning" style="display: none; margin-top: 10px;"></div>
-        <div id="iosShareNote" class="device-info" style="display: none;"></div>
       </div>
-      <div class="instruction-steps" style="background: #071225; border-radius: 1.2rem; padding: 1rem; margin-top: 1rem;">
-        <i class="fas fa-info-circle"></i> <strong>Cross-Device Tips:</strong>
-        <ul style="margin-left: 20px; margin-top: 8px; line-height: 1.4;">
-          <li>✅ Android / Desktop (Chrome, Edge) – can share screen.</li>
-          <li>❌ iPhone / iPad (iOS) – cannot share screen (browser limitation).</li>
-          <li>📱 iOS can be the <strong>parent</strong> (view child screen) – works fine.</li>
-          <li>🔒 <strong>HTTPS required</strong> for screen sharing on Android & desktop.</li>
-        </ul>
+      <div class="instruction-steps" style="background: #071225; border-radius: 1rem; padding: 1rem; margin-top: 1rem; font-size: 0.8rem;">
+        <i class="fas fa-info-circle"></i> <strong>Troubleshooting black screen:</strong><br>
+        • Open browser console (F12) to see logs.<br>
+        • Make sure child selected a screen/window (not a disabled tab).<br>
+        • Try refreshing both pages and restarting session.
       </div>
     </div>
   </div>
-
-  <div class="card" style="text-align:center;">
-    <p style="color:#b9cfe8;">✔ Direct WebRTC – no cloud storage.<br>✔ Works across different networks (STUN servers).<br>✔ Session code is the parent's direct Peer ID. One-time use.</p>
-  </div>
-  <footer><i class="fas fa-exchange-alt"></i> Parent starts session, child enters code – works across laptop, Android, and iOS (as viewer).</footer>
+  <footer><i class="fas fa-exchange-alt"></i> If black screen, share console logs with support.</footer>
 </div>
 
 <script>
   (function() {
-    // Helper: generate random 6-char alphanumeric code
+    console.log("=== PAGE LOADED ===");
+    // Helper: generate random 6-char code
     function generateSessionCode() {
       const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ0123456789';
       let code = '';
-      for (let i = 0; i < 6; i++) {
-        code += chars[Math.floor(Math.random() * chars.length)];
-      }
+      for (let i = 0; i < 6; i++) code += chars[Math.floor(Math.random() * chars.length)];
       return code;
     }
 
-    // Feature detection for screen sharing
-    function isScreenShareSupported() {
-      return !!(navigator.mediaDevices && navigator.mediaDevices.getDisplayMedia);
-    }
-
-    // Detect iOS
-    function isIOS() {
-      return /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
-    }
-
-    // Detect Android
-    function isAndroid() {
-      return /Android/i.test(navigator.userAgent);
-    }
-
-    // Check if secure context (HTTPS or localhost)
     function isSecureContext() {
       return location.protocol === 'https:' || location.hostname === 'localhost' || location.hostname === '127.0.0.1';
     }
 
-    // Parent globals
-    let activeParentPeer = null;
-    let activeParentCall = null;
-    let parentCallAccepted = false;
-    let currentSessionCode = null;
+    // Parent variables
+    let activeParentPeer = null, activeParentCall = null, parentCallAccepted = false, currentSessionCode = null;
 
     const parentStatusBox = document.getElementById('parentStatusBox');
     const sessionCodeArea = document.getElementById('sessionCodeArea');
@@ -133,54 +102,26 @@
     const childJoinBtn = document.getElementById('childJoinBtn');
     const childMessageArea = document.getElementById('childMessageArea');
     const childBrowserWarning = document.getElementById('childBrowserWarning');
-    const iosShareNote = document.getElementById('iosShareNote');
-
-    // Show warnings based on device and protocol
-    if (isIOS()) {
-      iosShareNote.style.display = 'block';
-      iosShareNote.innerHTML = '<i class="fas fa-exclamation-circle"></i> iOS cannot share screen. You can be the parent (viewer) instead.';
-      childJoinBtn.disabled = true;
-      childJoinBtn.style.opacity = '0.5';
-      childJoinBtn.title = 'Screen sharing not supported on iOS';
-    }
-
-    if (!isSecureContext() && (isAndroid() || !isIOS())) {
-      childBrowserWarning.style.display = 'block';
-      childBrowserWarning.innerHTML = `<i class="fas fa-lock"></i> <strong>HTTPS Required for Screen Sharing</strong><br>
-      Your site is loaded over HTTP. Modern browsers block screen sharing on non-secure connections.<br><br>
-      <div class="fix-box">
-        <strong>🔧 How to fix:</strong><br>
-        • Use <strong>HTTPS</strong> hosting (GitHub Pages, Netlify, Vercel all provide free HTTPS).<br>
-        • Or test on <strong>localhost</strong> (allowed even without HTTPS).<br>
-        • Or enable Chrome flag: <code>chrome://flags/#unsafely-treat-insecure-origin-as-secure</code><br>
-        &nbsp;&nbsp;Add your current URL: <code>${window.location.origin}</code>
-      </div>`;
-      childJoinBtn.disabled = true;
-      childJoinBtn.style.opacity = '0.5';
-      updateChildMessage("Screen sharing unavailable – HTTPS required.", true);
-    }
 
     function updateParentStatus(msg, isError = false) {
-      parentStatusBox.innerHTML = isError ? `<i class="fas fa-exclamation-triangle"></i> ${msg}` : `<i class="fas fa-info-circle"></i> ${msg}`;
+      parentStatusBox.innerHTML = msg;
       if (isError) parentStatusBox.classList.add('error-badge');
       else parentStatusBox.classList.remove('error-badge');
+      console.log("[Parent]", msg);
     }
 
     function updateChildMessage(msg, isError = false) {
-      childMessageArea.innerHTML = isError ? `<i class="fas fa-exclamation-triangle"></i> ${msg}` : `<i class="fas fa-info-circle"></i> ${msg}`;
+      childMessageArea.innerHTML = msg;
       if (isError) childMessageArea.classList.add('error-badge');
       else childMessageArea.classList.remove('error-badge');
+      console.log("[Child]", msg);
     }
 
     function cleanupParentSession() {
-      if (activeParentCall) { try { activeParentCall.close(); } catch(e) {} activeParentCall = null; }
-      if (activeParentPeer) { 
-        try { activeParentPeer.destroy(); } catch(e) {} 
-        activeParentPeer = null; 
-      }
+      if (activeParentCall) try { activeParentCall.close(); } catch(e) {}
+      if (activeParentPeer) try { activeParentPeer.destroy(); } catch(e) {}
       if (childScreenVideo.srcObject) {
-        const old = childScreenVideo.srcObject;
-        if (old && old.getTracks) old.getTracks().forEach(t => t.stop());
+        childScreenVideo.srcObject.getTracks().forEach(t => t.stop());
         childScreenVideo.srcObject = null;
       }
       liveVideoArea.style.display = 'none';
@@ -191,313 +132,190 @@
     function showSessionCode(code) {
       sessionCodeArea.innerHTML = `
         <div class="session-code">
-          <i class="fas fa-key" style="font-size: 1.5rem; color:#7bc5ff;"></i>
-          <p style="margin-bottom: 10px;">Share this 6‑digit code with your child:</p>
+          <i class="fas fa-key"></i><br>
           <div class="code-digits">${code}</div>
-          <button id="copyCodeBtn" class="copy-btn"><i class="fas fa-copy"></i> Copy Code</button>
-          <p style="margin-top: 15px; font-size: 0.8rem;">Child enters this code on their device → shares screen.</p>
-          <p style="margin-top: 8px; font-size: 0.75rem; color:#7aa2f7;"><i class="fas fa-info-circle"></i> Code expires after first connection.</p>
+          <button id="copyCodeBtn" class="copy-btn"><i class="fas fa-copy"></i> Copy</button>
+          <p style="margin-top:10px;">Child enters this code on their device</p>
         </div>
       `;
-      const copyBtn = document.getElementById('copyCodeBtn');
-      if (copyBtn) {
-        copyBtn.onclick = () => {
-          navigator.clipboard.writeText(code);
-          copyBtn.innerHTML = '<i class="fas fa-check"></i> Copied!';
-          setTimeout(() => copyBtn.innerHTML = '<i class="fas fa-copy"></i> Copy Code', 2000);
-        };
-      }
+      document.getElementById('copyCodeBtn')?.addEventListener('click', () => {
+        navigator.clipboard.writeText(code);
+        alert("Code copied!");
+      });
     }
 
     async function startPrivateSession() {
       cleanupParentSession();
       let code = generateSessionCode();
-      let peerCreated = false;
-      let attempts = 0;
-      const maxAttempts = 10;
-      
-      updateParentStatus(`🔒 Creating private session... (trying code: ${code})`);
-      
-      while (!peerCreated && attempts < maxAttempts) {
+      let peerCreated = false, attempts = 0;
+      updateParentStatus(`🔒 Creating session with code: ${code}...`);
+      while (!peerCreated && attempts < 10) {
         try {
-          const testPeer = new Peer(code, {
-            debug: 0,
-            config: { iceServers: [
-              { urls: "stun:stun.l.google.com:19302" },
-              { urls: "stun:stun1.l.google.com:19302" },
-              { urls: "stun:global.stun.twilio.com:3478" }
-            ]}
-          });
-          
+          const peer = new Peer(code, { debug: 0, config: { iceServers: [{ urls: "stun:stun.l.google.com:19302" }] } });
           await new Promise((resolve, reject) => {
-            testPeer.on('open', () => {
-              peerCreated = true;
-              activeParentPeer = testPeer;
-              resolve();
-            });
-            testPeer.on('error', (err) => {
-              if (err.type === 'unavailable-id' || (err.message && err.message.includes('ID is taken'))) {
-                reject(new Error('ID taken'));
-              } else {
-                reject(err);
-              }
-            });
+            peer.on('open', () => { peerCreated = true; activeParentPeer = peer; resolve(); });
+            peer.on('error', (err) => reject(err));
             setTimeout(() => reject(new Error('timeout')), 5000);
           });
-          
-          if (peerCreated) {
-            currentSessionCode = code;
-            break;
-          }
+          if (peerCreated) { currentSessionCode = code; break; }
         } catch (err) {
-          console.warn(`Code ${code} unavailable, retrying...`, err);
+          console.warn("Retry, code taken:", code);
           code = generateSessionCode();
           attempts++;
         }
       }
-      
-      if (!peerCreated) {
-        updateParentStatus(`❌ Failed to create session after multiple attempts. Please try again.`, true);
-        return;
-      }
-      
-      updateParentStatus(`✅ Session active! Share the code with your child.`);
-      showSessionCode(currentSessionCode);
-      
-      activeParentPeer.on('call', (incomingCall) => {
-        if (parentCallAccepted) {
-          incomingCall.close();
-          updateParentStatus(`⚠️ Extra connection rejected – only one child allowed.`, false);
-          return;
-        }
+      if (!peerCreated) { updateParentStatus("Failed to create session", true); return; }
+      updateParentStatus(`✅ Session active! Code: ${code}`);
+      showSessionCode(code);
+
+      activeParentPeer.on('call', (call) => {
+        console.log("Incoming call from child", call);
+        if (parentCallAccepted) { call.close(); updateParentStatus("Rejected extra call", false); return; }
         parentCallAccepted = true;
-        if (activeParentCall) try { activeParentCall.close(); } catch(e) {}
-        activeParentCall = incomingCall;
-        
-        incomingCall.answer();
-        
-        incomingCall.on('stream', (remoteStream) => {
-          console.log("Parent received stream, track count:", remoteStream.getVideoTracks().length);
+        activeParentCall = call;
+        // Answer with no stream (we only receive)
+        call.answer();
+        call.on('stream', (remoteStream) => {
+          console.log("Parent received stream, tracks:", remoteStream.getTracks().length);
           if (remoteStream.getVideoTracks().length === 0) {
-            updateParentStatus("⚠️ Received stream has no video track. Ask child to share a screen/window.", true);
+            updateParentStatus("⚠️ Stream has no video track!", true);
             return;
           }
-          
+          // ** Fix black screen: assign and play **
           if (childScreenVideo.srcObject) {
-            const old = childScreenVideo.srcObject;
-            if (old && old.getTracks) old.getTracks().forEach(t => t.stop());
+            childScreenVideo.srcObject.getTracks().forEach(t => t.stop());
           }
-          
           childScreenVideo.srcObject = remoteStream;
-          childScreenVideo.play().catch(e => console.warn("Autoplay error:", e));
+          childScreenVideo.muted = true; // ensure autoplay
+          childScreenVideo.play().then(() => {
+            console.log("Video playing successfully");
+            updateParentStatus("🟢 LIVE - Watching child's screen");
+          }).catch(e => {
+            console.error("Video play error:", e);
+            updateParentStatus("⚠️ Autoplay blocked? Click video to start", true);
+            // fallback: add controls
+            childScreenVideo.controls = true;
+          });
           liveVideoArea.style.display = 'block';
-          updateParentStatus(`🟢 PRIVATE LIVE: You are watching your child's screen. No one else can view.`);
-          
-          sessionCodeArea.innerHTML = `<div style="background:#0a2f2a; padding:20px; border-radius:2rem; text-align:center;">
-            <i class="fas fa-check-double"></i> Child connected – session active and private.<br>Code is now invalid for new connections.
-          </div>`;
-          
-          if (remoteStream.getVideoTracks()[0]) {
-            remoteStream.getVideoTracks()[0].onended = () => {
-              updateParentStatus(`⏹️ Child stopped sharing.`);
-              liveVideoArea.style.display = 'none';
-              parentCallAccepted = false;
-            };
-          }
+          sessionCodeArea.innerHTML = `<div style="background:#0a2f2a; padding:20px; border-radius:2rem;">✅ Child connected. Session active.</div>`;
+          remoteStream.getVideoTracks()[0].onended = () => {
+            updateParentStatus("Child stopped sharing");
+            liveVideoArea.style.display = 'none';
+            parentCallAccepted = false;
+          };
         });
-        
-        incomingCall.on('close', () => {
-          console.log("Call closed by child");
-          if (childScreenVideo.srcObject) {
-            const old = childScreenVideo.srcObject;
-            if (old && old.getTracks) old.getTracks().forEach(t => t.stop());
-            childScreenVideo.srcObject = null;
-          }
+        call.on('close', () => {
+          console.log("Call closed");
+          if (childScreenVideo.srcObject) childScreenVideo.srcObject.getTracks().forEach(t => t.stop());
+          childScreenVideo.srcObject = null;
           liveVideoArea.style.display = 'none';
-          updateParentStatus(`🔌 Child disconnected. Start a new session.`);
+          updateParentStatus("Child disconnected");
           parentCallAccepted = false;
-          activeParentCall = null;
         });
-        
-        incomingCall.on('error', (err) => {
-          console.error("Call error:", err);
-          updateParentStatus(`Call error: ${err.message}`, true);
-        });
+        call.on('error', (err) => updateParentStatus(`Call error: ${err.message}`, true));
       });
-      
-      activeParentPeer.on('error', (err) => { 
-        console.error("Parent peer error:", err);
-        updateParentStatus(`Peer error: ${err.type}`, true); 
-        cleanupParentSession();
-      });
+      activeParentPeer.on('error', (err) => updateParentStatus(`Peer error: ${err.type}`, true));
     }
-    
+
     function stopMonitoringSession() {
       cleanupParentSession();
-      sessionCodeArea.innerHTML = `<div style="padding: 20px; color:#b9caf5;">No active session. Click "Start Private Session".</div>`;
-      updateParentStatus(`⏹️ Session ended.`);
+      sessionCodeArea.innerHTML = `<div style="padding:20px;">No active session. Click "Start Private Session".</div>`;
+      updateParentStatus("Session ended");
     }
-    
-    // Child join logic
-    let childPeerInstance = null;
-    let childStream = null;
-    let childCall = null;
-    let childConnected = false;
-    let isJoining = false;
-    
+
+    // Child side
+    let childPeer = null, childStream = null, childCall = null, isJoining = false;
+
     function cleanupChild() {
-      if (childCall) { try { childCall.close(); } catch(e) {} childCall = null; }
-      if (childStream) { childStream.getTracks().forEach(t => t.stop()); childStream = null; }
-      if (childPeerInstance) { try { childPeerInstance.destroy(); } catch(e) {} childPeerInstance = null; }
-      childConnected = false;
-      isJoining = false;
+      if (childCall) try { childCall.close(); } catch(e) {}
+      if (childStream) childStream.getTracks().forEach(t => t.stop());
+      if (childPeer) try { childPeer.destroy(); } catch(e) {}
+      childStream = null; childCall = null; childPeer = null; isJoining = false;
     }
-    
+
     async function childJoinSession() {
-      if (isJoining) {
-        updateChildMessage("Already joining, please wait...");
+      if (isJoining) { updateChildMessage("Already joining..."); return; }
+      const code = childCodeInput.value.trim().toUpperCase();
+      if (code.length !== 6) { updateChildMessage("Enter 6-digit code", true); return; }
+      if (!navigator.mediaDevices?.getDisplayMedia) {
+        let err = "Screen sharing not supported. Use HTTPS and Chrome/Edge.";
+        if (!isSecureContext()) err += " Also, this page is not HTTPS.";
+        updateChildMessage(err, true);
+        childBrowserWarning.style.display = 'block';
+        childBrowserWarning.innerHTML = err;
         return;
       }
-      
-      if (!isSecureContext() && !isIOS()) {
-        updateChildMessage("Screen sharing requires HTTPS. Please use a secure connection.", true);
-        return;
-      }
-      
-      if (isIOS()) {
-        updateChildMessage("iOS cannot share screen. Use an Android device or desktop to share.", true);
-        return;
-      }
-      
-      const enteredCode = childCodeInput.value.trim().toUpperCase();
-      if (enteredCode.length !== 6) {
-        updateChildMessage("Please enter a valid 6-digit code.", true);
-        return;
-      }
-      
-      if (!isScreenShareSupported()) {
-        let errMsg = "";
-        if (!navigator.mediaDevices) errMsg = "Browser does not support screen capture. Use Chrome on Android or desktop.";
-        else if (!navigator.mediaDevices.getDisplayMedia) errMsg = "Screen sharing unavailable. Ensure HTTPS and try again.";
-        childBrowserWarning.style.display = "block";
-        childBrowserWarning.innerHTML = `<i class="fas fa-exclamation-triangle"></i> ${errMsg}`;
-        updateChildMessage(errMsg, true);
-        return;
-      }
-      childBrowserWarning.style.display = "none";
-      
       isJoining = true;
       childJoinBtn.disabled = true;
       childJoinBtn.innerHTML = '<i class="fas fa-spinner fa-pulse"></i> Requesting screen...';
-      updateChildMessage("Requesting screen capture permission...");
-      
+      updateChildMessage("Requesting screen capture...");
+
       try {
-        const screenStream = await navigator.mediaDevices.getDisplayMedia({ 
-          video: { cursor: "motion" }, 
-          audio: false 
-        });
-        
-        if (screenStream.getVideoTracks().length === 0) {
-          throw new Error("No video track in screen share. Did you select a screen/window?");
-        }
-        
-        childStream = screenStream;
-        updateChildMessage("Screen captured. Establishing private connection...");
-        
-        const childPeerId = 'child_' + Math.random().toString(36).substring(2, 12) + Date.now();
-        childPeerInstance = new Peer(childPeerId, {
-          config: { iceServers: [
-            { urls: "stun:stun.l.google.com:19302" },
-            { urls: "stun:stun1.l.google.com:19302" }
-          ]}
-        });
-        
-        childPeerInstance.on('open', () => {
-          if (childConnected) return;
-          childCall = childPeerInstance.call(enteredCode, screenStream);
-          
-          childCall.on('stream', (remoteStream) => {
-            console.log("Child received remote stream (ignored)");
-          });
-          
+        const stream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: false });
+        if (stream.getVideoTracks().length === 0) throw new Error("No video track");
+        childStream = stream;
+        updateChildMessage("Screen captured. Connecting...");
+        const childId = 'child_' + Math.random().toString(36).substring(2);
+        childPeer = new Peer(childId, { config: { iceServers: [{ urls: "stun:stun.l.google.com:19302" }] } });
+        childPeer.on('open', () => {
+          console.log("Child peer open, calling parent:", code);
+          childCall = childPeer.call(code, stream);
+          childCall.on('stream', (remote) => console.log("Child received remote stream (ignored)"));
           childCall.on('close', () => {
-            updateChildMessage("Parent ended session. You can close this tab.");
+            updateChildMessage("Parent ended session");
             cleanupChild();
             childJoinBtn.disabled = false;
             childJoinBtn.innerHTML = '<i class="fas fa-sign-in-alt"></i> Join & Share Screen';
-            isJoining = false;
             childCodeInput.disabled = false;
-            childJoinBtn.onclick = childJoinSession;
+            isJoining = false;
           });
-          
           childCall.on('error', (err) => {
-            updateChildMessage(`Connection error: ${err.message}. Ensure parent session is active and code is correct.`, true);
+            updateChildMessage(`Connection error: ${err.message}`, true);
             cleanupChild();
             childJoinBtn.disabled = false;
             childJoinBtn.innerHTML = '<i class="fas fa-sign-in-alt"></i> Join & Share Screen';
             isJoining = false;
-            childCodeInput.disabled = false;
-            childJoinBtn.onclick = childJoinSession;
           });
-          
-          childConnected = true;
-          updateChildMessage('✅ PRIVATE: Parent is now viewing your screen!');
-          childJoinBtn.innerHTML = '<i class="fas fa-check-circle"></i> Screen Shared ✓';
+          updateChildMessage("✅ Shared! Parent can see your screen.");
+          childJoinBtn.innerHTML = '<i class="fas fa-check-circle"></i> LIVE';
           childJoinBtn.disabled = false;
-          childJoinBtn.onclick = () => updateChildMessage('Already sharing. Close tab to stop.');
           childCodeInput.disabled = true;
-          
-          const videoTrack = screenStream.getVideoTracks()[0];
-          if (videoTrack) {
-            videoTrack.onended = () => {
-              updateChildMessage('You stopped sharing. Parent can no longer see your screen.');
-              cleanupChild();
-              childJoinBtn.disabled = false;
-              childJoinBtn.innerHTML = '<i class="fas fa-sign-in-alt"></i> Join & Share Screen';
-              isJoining = false;
-              childCodeInput.disabled = false;
-              childJoinBtn.onclick = childJoinSession;
-            };
-          }
+          stream.getVideoTracks()[0].onended = () => {
+            updateChildMessage("You stopped sharing");
+            cleanupChild();
+            childJoinBtn.disabled = false;
+            childJoinBtn.innerHTML = '<i class="fas fa-sign-in-alt"></i> Join & Share Screen';
+            childCodeInput.disabled = false;
+            isJoining = false;
+          };
         });
-        
-        childPeerInstance.on('error', (err) => {
-          console.error("Child peer error:", err);
-          updateChildMessage(`Peer error: ${err.type}. Refresh and try again.`, true);
+        childPeer.on('error', (err) => {
+          updateChildMessage(`Peer error: ${err.type}`, true);
           cleanupChild();
           childJoinBtn.disabled = false;
           childJoinBtn.innerHTML = '<i class="fas fa-sign-in-alt"></i> Join & Share Screen';
           isJoining = false;
-          childCodeInput.disabled = false;
-          childJoinBtn.onclick = childJoinSession;
         });
-        
-        window.addEventListener('beforeunload', () => cleanupChild());
-        
       } catch (err) {
         console.error(err);
-        let friendlyMsg = err.message;
-        if (friendlyMsg.includes("not allowed")) friendlyMsg = "Screen share permission denied. Please allow when prompted.";
-        if (friendlyMsg.includes("not supported")) friendlyMsg = "Screen sharing not supported. Use Chrome/Edge on Android or desktop.";
-        updateChildMessage(friendlyMsg, true);
+        updateChildMessage(`Error: ${err.message}`, true);
         childJoinBtn.disabled = false;
         childJoinBtn.innerHTML = '<i class="fas fa-sign-in-alt"></i> Join & Share Screen';
         isJoining = false;
         cleanupChild();
       }
     }
-    
-    // Attach event listeners
+
     startMonitorBtn.onclick = startPrivateSession;
     stopSessionBtn.onclick = stopMonitoringSession;
     childJoinBtn.onclick = childJoinSession;
-    
-    updateParentStatus("Ready — click 'Start Private Session' to generate a code.");
-    sessionCodeArea.innerHTML = `<div style="padding:20px; background:#0a1122; border-radius:2rem; text-align:center;">✨ Start a new private monitoring session.</div>`;
-    if (!isSecureContext() && !isIOS()) {
-      updateChildMessage("Screen sharing requires HTTPS. Check the warning above.", true);
-    } else {
-      updateChildMessage("Enter the 6-digit code from parent above and click Join.");
+
+    updateParentStatus("Ready — click 'Start Private Session'");
+    sessionCodeArea.innerHTML = `<div style="padding:20px; text-align:center;">✨ Generate a session code above.</div>`;
+    updateChildMessage("Enter the 6‑digit code from parent.");
+    if (!isSecureContext()) {
+      childBrowserWarning.style.display = 'block';
+      childBrowserWarning.innerHTML = "⚠️ Not HTTPS: Screen sharing will fail on Android. Use HTTPS or localhost.";
     }
   })();
 </script>
