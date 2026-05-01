@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
-  <title>Parental Guardian · Private Screen Monitor</title>
+  <title>Parental Guardian · Cross-Device Screen Monitor</title>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/peerjs/1.5.4/peerjs.min.js"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
   <style>
@@ -11,7 +11,7 @@
     body { background: radial-gradient(circle at 10% 20%, #0a0f1c, #020408); min-height: 100vh; padding: 20px; }
     .container { max-width: 1400px; margin: 0 auto; }
     .card { background: rgba(12, 20, 30, 0.85); backdrop-filter: blur(12px); border-radius: 2rem; border: 1px solid rgba(59, 130, 246, 0.4); padding: 1.8rem; margin-bottom: 1.8rem; }
-    h1 { font-size: 1.9rem; background: linear-gradient(135deg, #f0f9ff, #7bc5ff); -webkit-background-clip: text; background-clip: text; color: transparent; display: flex; align-items: center; gap: 12px; }
+    h1 { font-size: 1.9rem; background: linear-gradient(135deg, #f0f9ff, #7bc5ff); -webkit-background-clip: text; background-clip: text; color: transparent; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
     h2 { color: #ecf3ff; margin-bottom: 1rem; font-size: 1.5rem; }
     .flex-row { display: flex; flex-wrap: wrap; gap: 28px; align-items: stretch; }
     .panel { flex: 1; min-width: 280px; }
@@ -27,6 +27,7 @@
     .join-area { background: #0f172a; border-radius: 1.5rem; padding: 1.5rem; margin-top: 1rem; }
     .code-input { background: #0f172a; border: 2px solid #3b82f6; padding: 14px 20px; border-radius: 60px; font-size: 1.2rem; color: white; text-align: center; letter-spacing: 4px; width: 220px; font-family: monospace; }
     .warning { background: #7c2d12; border-left-color: #f97316; }
+    .device-info { font-size: 0.75rem; color: #7aa2f7; margin-top: 8px; }
     footer { text-align: center; color: #5f7ea3; margin-top: 2rem; font-size: 0.85rem; }
     @media (max-width: 700px) { button { width: 100%; justify-content: center; } .code-digits { font-size: 2rem; letter-spacing: 6px; } }
   </style>
@@ -34,8 +35,8 @@
 <body>
 <div class="container">
   <div class="card">
-    <h1><i class="fas fa-shield-alt" style="color:#3b82f6"></i> Parental Guardian · Private One-to-One</h1>
-    <p style="color:#bbd9f5;">🔒 <strong>Only the parent who creates the session sees the child’s screen.</strong> Child joins using the 6‑digit code on this same page.</p>
+    <h1><i class="fas fa-shield-alt" style="color:#3b82f6"></i> Parental Guardian · Cross-Device</h1>
+    <p style="color:#bbd9f5;">🔒 <strong>Only the parent who creates the session sees the child’s screen.</strong> Works across laptop ↔ phone (Android & iOS as viewer only).</p>
   </div>
 
   <div class="flex-row">
@@ -43,7 +44,7 @@
     <div class="panel card">
       <h2><i class="fas fa-eye"></i> 👨‍👩 Parent (Monitor)</h2>
       <button id="startMonitorBtn"><i class="fas fa-play"></i> Start Private Session</button>
-      <div id="parentStatusBox" class="status-card">⚡ Ready — click to generate a session code</div>
+      <div id="parentStatusBox" class="status-card">⚡ Ready — click to generate session code</div>
       <div id="sessionCodeArea" style="text-align: center;"></div>
       <div id="liveVideoArea" style="display: none;">
         <div class="badge" style="background:#2563eb;">📡 LIVE CHILD SCREEN (Only you)</div>
@@ -63,23 +64,24 @@
         </div>
         <div id="childMessageArea" class="status-card" style="margin-top: 15px; font-size: 0.9rem;">Ready — enter code and click Join.</div>
         <div id="childBrowserWarning" class="status-card warning" style="display: none; margin-top: 10px;"></div>
+        <div id="iosShareNote" class="device-info" style="display: none;"></div>
       </div>
       <div class="instruction-steps" style="background: #071225; border-radius: 1.2rem; padding: 1rem; margin-top: 1rem;">
-        <i class="fas fa-info-circle"></i> <strong>How it works:</strong>
-        <ol style="margin-left: 20px; margin-top: 8px; line-height: 1.5;">
-          <li>Parent starts session → 6‑digit code appears.</li>
-          <li>Child enters the same code here and clicks "Join & Share Screen".</li>
-          <li>Child grants screen share permission → parent sees live screen.</li>
-          <li>Only this parent can view the stream – private & secure.</li>
-        </ol>
+        <i class="fas fa-info-circle"></i> <strong>Cross-Device Tips:</strong>
+        <ul style="margin-left: 20px; margin-top: 8px; line-height: 1.4;">
+          <li>✅ Android / Desktop (Chrome, Edge) – can share screen.</li>
+          <li>❌ iPhone / iPad (iOS) – cannot share screen (browser limitation).</li>
+          <li>📱 iOS can be the <strong>parent</strong> (view child screen) – works fine.</li>
+        </ul>
+        <p style="margin-top: 8px; font-size: 0.75rem;">Use the same website URL on both devices.</p>
       </div>
     </div>
   </div>
 
   <div class="card" style="text-align:center;">
-    <p style="color:#b9cfe8;">✔ Direct WebRTC – no cloud recording.<br>✔ Session code is the parent's direct Peer ID.<br>✔ Works across different devices, browsers, and tabs.</p>
+    <p style="color:#b9cfe8;">✔ Direct WebRTC – no cloud storage.<br>✔ Works across different networks (STUN servers).<br>✔ Session code is the parent's direct Peer ID. One-time use.</p>
   </div>
-  <footer><i class="fas fa-key"></i> Parent creates session, child enters code – simple and private.</footer>
+  <footer><i class="fas fa-exchange-alt"></i> Parent starts session, child enters code – works across laptop, Android, and iOS (as viewer).</footer>
 </div>
 
 <script>
@@ -94,9 +96,14 @@
       return code;
     }
 
-    // Feature detection for getDisplayMedia
+    // Feature detection for screen sharing
     function isScreenShareSupported() {
       return !!(navigator.mediaDevices && navigator.mediaDevices.getDisplayMedia);
+    }
+
+    // Detect iOS
+    function isIOS() {
+      return /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
     }
 
     // Parent globals
@@ -115,6 +122,16 @@
     const childJoinBtn = document.getElementById('childJoinBtn');
     const childMessageArea = document.getElementById('childMessageArea');
     const childBrowserWarning = document.getElementById('childBrowserWarning');
+    const iosShareNote = document.getElementById('iosShareNote');
+
+    // Show iOS warning if trying to share from iOS
+    if (isIOS()) {
+      iosShareNote.style.display = 'block';
+      iosShareNote.innerHTML = '<i class="fas fa-exclamation-circle"></i> iOS cannot share screen. You can be the parent (viewer) instead.';
+      childJoinBtn.disabled = true;
+      childJoinBtn.style.opacity = '0.5';
+      childJoinBtn.title = 'Screen sharing not supported on iOS';
+    }
 
     function updateParentStatus(msg, isError = false) {
       parentStatusBox.innerHTML = isError ? `<i class="fas fa-exclamation-triangle"></i> ${msg}` : `<i class="fas fa-info-circle"></i> ${msg}`;
@@ -151,7 +168,7 @@
           <p style="margin-bottom: 10px;">Share this 6‑digit code with your child:</p>
           <div class="code-digits">${code}</div>
           <button id="copyCodeBtn" class="copy-btn"><i class="fas fa-copy"></i> Copy Code</button>
-          <p style="margin-top: 15px; font-size: 0.8rem;">Child enters this code in the panel on the right → shares screen.</p>
+          <p style="margin-top: 15px; font-size: 0.8rem;">Child enters this code on their device → shares screen.</p>
           <p style="margin-top: 8px; font-size: 0.75rem; color:#7aa2f7;"><i class="fas fa-info-circle"></i> Code expires after first connection.</p>
         </div>
       `;
@@ -298,7 +315,7 @@
       updateParentStatus(`⏹️ Session ended.`);
     }
     
-    // Child join logic
+    // Child join logic (cross-device)
     let childPeerInstance = null;
     let childStream = null;
     let childCall = null;
@@ -318,6 +335,12 @@
         updateChildMessage("Already joining, please wait...");
         return;
       }
+      
+      if (isIOS()) {
+        updateChildMessage("iOS cannot share screen. Use an Android device or desktop to share.", true);
+        return;
+      }
+      
       const enteredCode = childCodeInput.value.trim().toUpperCase();
       if (enteredCode.length !== 6) {
         updateChildMessage("Please enter a valid 6-digit code.", true);
@@ -326,7 +349,7 @@
       
       if (!isScreenShareSupported()) {
         let errMsg = "";
-        if (!navigator.mediaDevices) errMsg = "Browser does not support screen capture. Use Chrome/Edge over HTTPS.";
+        if (!navigator.mediaDevices) errMsg = "Browser does not support screen capture. Use Chrome/Edge on Android or desktop.";
         else if (!navigator.mediaDevices.getDisplayMedia) errMsg = "Screen sharing unavailable. Use HTTPS or localhost. On iOS, screen sharing not supported.";
         childBrowserWarning.style.display = "block";
         childBrowserWarning.innerHTML = `<i class="fas fa-exclamation-triangle"></i> ${errMsg}`;
@@ -346,7 +369,6 @@
           audio: false 
         });
         
-        // Verify video tracks exist
         if (screenStream.getVideoTracks().length === 0) {
           throw new Error("No video track in screen share. Did you select a screen/window?");
         }
@@ -364,7 +386,6 @@
         
         childPeerInstance.on('open', () => {
           if (childConnected) return;
-          // Call parent using the entered code as parent's Peer ID
           childCall = childPeerInstance.call(enteredCode, screenStream);
           
           childCall.on('stream', (remoteStream) => {
@@ -430,7 +451,7 @@
         console.error(err);
         let friendlyMsg = err.message;
         if (friendlyMsg.includes("not allowed")) friendlyMsg = "Screen share permission denied. Please allow when prompted.";
-        if (friendlyMsg.includes("not supported")) friendlyMsg = "Screen sharing not supported. Use Chrome/Edge on desktop or Android.";
+        if (friendlyMsg.includes("not supported")) friendlyMsg = "Screen sharing not supported. Use Chrome/Edge on Android or desktop.";
         updateChildMessage(friendlyMsg, true);
         childJoinBtn.disabled = false;
         childJoinBtn.innerHTML = '<i class="fas fa-sign-in-alt"></i> Join & Share Screen';
